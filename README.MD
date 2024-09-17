@@ -8,7 +8,7 @@ Why I write this progmra? because it is how I learn to build a cli in Linux, and
 From github
 ```bash
 # Download
-curl -L -o tunacalc_linux_x86_64.tar.gz https://github.com/NguyenAnhTuan1912/simple-bin-calculator/releases/download/latest/tunacalc_linux_x86_64.tar.gz
+curl -L -o tunacalc_linux_x86_64.tar.gz https://github.com/NguyenAnhTuan1912/simple-bin-calculator/releases/latest/download/tunacalc_linux_x86_64.tar.gz
 
 # Decompress and Unzip
 gzip -d tunacalc_linux_x86_64.tar.gz
@@ -23,3 +23,4 @@ After you install successfully, you can use
 # Run with --help option to get information
 tunacalc --help
 ```
+
