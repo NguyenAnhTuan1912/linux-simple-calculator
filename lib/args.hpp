@@ -25,10 +25,23 @@ namespace Application {
       void setDescription(std::string desc);
 
       void printHelp(int tabIndent = 0);
+
+      // Static methods
+      static bool isOption(std::string optionKey);
   };
 
   namespace Types {
-    typedef std::map<std::string, std::any> Arguments;
+    struct ParsedArgument {
+      std::string command;
+      std::vector<std::string> options;
+      std::vector<std::string> values;
+      ~ParsedArgument() {
+        this->command = "";
+        this->options.clear();
+        this->values.clear();
+      }
+    };
+    typedef std::vector<ParsedArgument> ParsedArguments;
     typedef std::vector<Application::Option*> CommandOptions;
     typedef std::map<std::string, Application::Option*> OptionsLibrary;
   }
@@ -37,11 +50,17 @@ namespace Application {
     private:
       std::string _key;
       std::string _desc = "";
+      std::string _nargn = "+";
       Application::Types::CommandOptions* _options = nullptr;
 
     public:
       Command() = default;
       Command(std::string key, std::string desc): _key(key), _desc(desc) {};
+      Command(
+        std::string key,
+        std::string desc,
+        std::string nargn
+      ): _key(key), _desc(desc), _nargn(nargn) {};
 
       // Methods
       std::string getKey();
@@ -49,10 +68,13 @@ namespace Application {
       std::string getDescription();
       void setDescription(std::string desc);
       const Application::Types::CommandOptions* getOptions();
+      std::string getNArg();
+      void setNArg(std::string narg);
       
       void addOption(Option c);
       void addOption(Option* c);
       void addOption(std::string optionKey, std::string optionDesc);
+      bool checkOption(std::string optionKey);
 
       void printHelp(int tabIndent = 0);
   };
@@ -95,7 +117,7 @@ namespace Application {
       Application::Types::CommandsLibrary* _clib = new Application::Types::CommandsLibrary();
       Application::Types::OptionsLibrary* _olib = new Application::Types::OptionsLibrary();
       // Application::Types::ArgsGroups* _group = nullptr;
-      Application::Types::Arguments* _args = nullptr;
+      Application::Types::ParsedArguments* _pargs = nullptr;
     
     public:
       ArgsParser() = default;
@@ -105,11 +127,12 @@ namespace Application {
       Command* addCommand(Command c);
       Command* addCommand(Command* c);
       Command* addCommand(std::string commandKey, std::string commandDesc);
+      Command* addCommand(std::string commandKey, std::string commandDesc, std::string nargs);
       void addOption(Option c);
       void addOption(Option* c);
       void addOption(std::string optionKey, std::string optionDesc);
 
-      void parse(int argc, char* argv[]);
+      Application::Types::ParsedArgument* parse(int argc, char* argv[]);
       void printHelp();
   };
 }

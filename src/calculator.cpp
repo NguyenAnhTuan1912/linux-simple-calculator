@@ -13,7 +13,7 @@ float Application::Calculator::exec(float operandA, float operandB, std::string 
   if (oper == "*" || oper == "x" || oper == "mul")
     return this->mul(operandA, operandB);
 
-  throw Application::OperatorException(oper);
+  throw Application::InvalidOperatorException(oper);
 }
 
 float Application::Calculator::add(float operandA, float operandB) {

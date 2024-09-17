@@ -1,9 +1,12 @@
 #include <iomanip>
+#include <vector>
 #include <iterator>
 #include <cstring>
+#include <typeinfo>
 
 #include "../lib/args.hpp"
 #include "../lib/exceptions/operator_exception.hpp"
+#include "../lib/exceptions/arguments_exception.hpp"
 
 // Definition of Application::Option
 void Application::Option::setKey(std::string key) {
@@ -30,6 +33,17 @@ void Application::Option::printHelp(int tabIndent) {
     i++;
   }
   std::cout << tab << this->_key << "\t\t" << this->_desc << "\n";
+}
+
+bool Application::Option::isOption(std::string optionKey) {
+  int i = 0;
+  bool check = false;
+  while(i < 2) {
+    if (optionKey.at(i) == '-') check = true;
+    i++;
+  }
+
+  return check;
 }
 
 // Definition of Application::Command
@@ -72,6 +86,24 @@ void Application::Command::addOption(std::string optionKey, std::string optionDe
     this->_options = new Application::Types::CommandOptions();
 
   this->_options->push_back(new Option(optionKey, optionDesc));
+}
+
+std::string Application::Command::getNArg() {
+  return this->_nargn;
+}
+
+void Application::Command::setNArg(std::string narg) {
+  this->_nargn = narg;
+}
+
+bool Application::Command::checkOption(std::string optionKey) {
+  if (this->_options == nullptr) return false;
+
+  Application::Types::CommandOptions::iterator ito = this->_options->begin();
+  for (; ito != this->_options->end(); ito++) {
+    if ((*ito)->getKey() == optionKey) return true;
+  }
+  return false;
 }
 
 void Application::Command::printHelp(int tabIndent) {
@@ -167,6 +199,16 @@ Application::Command* Application::ArgsParser::addCommand(std::string commandKey
   return ptrC;
 }
 
+Application::Command* Application::ArgsParser::addCommand(
+  std::string commandKey,
+  std::string commandDesc,
+  std::string nargs
+) {
+  Application::Command* ptrC = new Application::Command(commandKey, commandDesc, nargs);
+  this->_clib->insert({ ptrC->getKey(), ptrC });
+  return ptrC;
+}
+
 void Application::ArgsParser::addOption(Application::Option o) {
   Application::Option* ptrO = new Application::Option(o);
   this->_olib->insert({ ptrO->getKey(), ptrO });
@@ -227,24 +269,90 @@ void Application::ArgsParser::printHelp() {
   }
 }
 
-void Application::ArgsParser::parse(int argc, char* argv[]) {
-  try {
-    // If there isn't arguments, show help
-    if (argc == 1) {
-      this->printHelp();
-      return;
-    }
-
-    // If argv[1] is a command
-
-    // If argv[1] is an option
-    if (this->_olib->find(argv[1]) != this->_olib->end()) {
-      if (std::strcmp(argv[1], "--help") == 0) {
-        this->printHelp();
-        return;
-      }
-    }
-  } catch(std::invalid_argument const& ex) {
-
+Application::Types::ParsedArgument* Application::ArgsParser::parse(int argc, char* argv[]) {
+  // If there aren't arguments, show help
+  if (argc == 1) {
+    this->printHelp();
+    return nullptr;
   }
+
+  // If there are arguments, process them
+  Application::Types::CommandsLibrary::iterator itc;
+  Application::Command* c = nullptr;
+  Application::Types::ParsedArgument* parg = new Application::Types::ParsedArgument();
+  
+  // The command is root by default
+  parg->command = "ROOT";
+  for (int i = 1; i < argc; i++) {
+    // c is a nullptr
+    if (c == nullptr)
+      itc = this->_clib->find(argv[i]);
+    
+    // c is a nullptr and itc isn't a null iterator
+    if (c == nullptr && itc != this->_clib->end()) {
+      if (c != nullptr)
+        throw Application::ExceedingArgumentsException("tunacalc");
+
+      c = itc->second;
+      // Insert command information to parg
+      parg->command = argv[i];
+      continue;
+    }
+    // If argv[i] is an option and c is nullptr
+    // that mean the option belong to root command
+    Application::Types::OptionsLibrary::iterator ito = this->_olib->find(argv[i]);
+    bool hasOption = ito != this->_olib->end();
+    if (hasOption && !Application::Option::isOption(argv[i]))
+      throw Application::InvalidOptionException(argv[i]);
+    if (hasOption) {
+      // Print help
+      // if (std::strcmp(argv[i], "--help") == 0 && parg->command == "ROOT") {
+      //   this->printHelp();
+      //   return nullptr;
+      // }
+
+      parg->options.push_back(argv[i]);
+      continue;
+    }
+
+    parg->values.push_back(argv[i]);
+  }
+
+  // Free memories
+  // delete currentCommandOptions;
+  // delete currentCommandValues;
+
+  if (parg->command == "ROOT")
+    return parg;
+
+  // Check options
+  std::vector<std::string>::iterator itstr = parg->options.begin();
+  while(itstr != parg->options.end()) {
+    // Erase options
+    // if (parg->command != "ROOT" && !c->checkOption((*itstr)))
+    //   parg->options.erase(itstr);
+    // else itstr++;
+
+    // Throw error when option don't exist in command (except ROOT)
+    if (parg->command != "ROOT" && !c->checkOption((*itstr)))
+      throw Application::InvalidOptionException((*itstr));
+    itstr++;
+  }
+
+  // Check value (number of vaules)
+  std::vector<std::string>::iterator itv = parg->values.begin();
+  std::string commandNArg = c->getNArg();
+  if (commandNArg != "*" && commandNArg != "+") {
+    if (parg->values.size() != std::stoi(commandNArg))
+      throw Application::ArgumentException(
+        "The command " +
+        parg->command +
+        " requires " +
+        commandNArg +
+        " arguments."
+      );
+  } else if (commandNArg == "+" && parg->values.size() == 0)
+    throw Application::InsufficientArgumentsException(parg->command);
+
+  return parg;
 }

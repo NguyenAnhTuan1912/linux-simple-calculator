@@ -4,13 +4,13 @@
 #include <iostream>
 
 namespace Application {
-  class OperatorException : public std::exception {
+  class InvalidOperatorException : public std::exception {
     private:
     std::string _message = "The operator is not a valid operator";
 
     public:
-    OperatorException() = default;
-    OperatorException(std::string oper) {
+    InvalidOperatorException() = default;
+    InvalidOperatorException(std::string oper) {
       this->_message = "The operator " + oper + " is not a valid operator";
     };
 
